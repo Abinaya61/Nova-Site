@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Sight</title>
+    
+    <!-- Google Fonts & Modern Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+        :root {
+            --bg-main: #0b0f17;
+            --sidebar-bg: #111827;
+            --card-bg: #1f2937;
+            --chat-bubble-bot: #161e2e;
+            --chat-bubble-user: #2563eb;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.15);
+            --text-primary: #f9fafb;
+            --text-muted: #9ca3af;
+            --border: #374151;
+            --danger: #ef4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-primary); display: flex; height: 100vh; overflow: hidden; }
+
+        .app-layout { display: flex; width: 100vw; height: 100vh; }
+
+        /* Modern Sidebar */
+        .sidebar {
+            width: 320px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .brand-icon {
+            background: linear-gradient(135deg, #38bdf8, #3b82f6);
+            padding: 8px;
+            border-radius: 10px;
+            display: flex;
+        }
+
+        .btn-new-chat {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #fff;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-new-chat:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        .section-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .upload-area {
+            border: 1.5px dashed var(--border);
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .upload-area:hover { border-color: var(--accent); background: var(--accent-glow); }
+
+        .file-list, .chat-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--card-bg);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            border: 1px solid transparent;
+        }
+        .file-item:hover { border-color: var(--border); }
+        .file-item a { color: var(--accent); text-decoration: none; display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%; }
+        
+        .delete-icon {
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .delete-icon:hover { color: var(--danger); transform: scale(1.1); }
+
+        .chat-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .chat-item.active { background: var(--card-bg); border-left: 3px solid var(--accent); }
+        .chat-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%; }
+
+        /* Main Workspace */
+        .workspace { flex: 1; display: flex; flex-direction: column; position: relative; background: var(--bg-main); }
+        .topbar {
+            padding: 16px 28px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(17, 24, 39, 0.6);
+            backdrop-filter: blur(10px);
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .message-row { display: flex; gap: 14px; max-width: 860px; width: 100%; margin: 0 auto; }
+        .message-row.user { justify-content: flex-end; }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+        }
+        .avatar.bot { background: linear-gradient(135deg, #0284c7, #2563eb); }
+
+        .bubble-content { display: flex; flex-direction: column; gap: 6px; max-width: 85%; }
+        
+        .bubble {
+            padding: 14px 18px;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        .message-row.user .bubble { background-color: var(--chat-bubble-user); color: #fff; border-bottom-right-radius: 2px; }
+        .message-row.bot .bubble { background-color: var(--chat-bubble-bot); border: 1px solid var(--border); border-bottom-left-radius: 2px; }
+
+        .chat-img-thumb {
+            max-width: 260px;
+            max-height: 260px;
+            border-radius: 8px;
+            margin-top: 8px;
+            cursor: pointer;
+            border: 2px solid var(--border);
+            transition: 0.2s;
+            display: block;
+            object-fit: cover;
+        }
+        .chat-img-thumb:hover { border-color: var(--accent); transform: scale(1.02); }
+
+        /* Markdown Styles inside bot bubble */
+        .bubble p { margin-bottom: 8px; }
+        .bubble p:last-child { margin-bottom: 0; }
+        .bubble ul, .bubble ol { margin-left: 20px; margin-bottom: 8px; }
+        .bubble code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; font-size: 0.85em; }
+
+        .actions-toolbar { display: flex; gap: 8px; margin-top: 4px; }
+        .tool-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .tool-btn:hover { color: #fff; background: var(--card-bg); }
+        .tool-btn.active-speak { border-color: var(--danger); color: var(--danger); }
+
+        /* Input Bar */
+        .input-wrapper { max-width: 860px; width: 100%; margin: 0 auto 24px auto; padding: 0 24px; }
+        
+        #previewBar {
+            display: none;
+            padding: 8px 12px;
+            background: var(--card-bg);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid var(--border);
+        }
+        #previewBar img { height: 40px; width: 40px; border-radius: 6px; object-fit: cover; }
+
+        .input-bar {
+            background-color: var(--sidebar-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        .input-bar input { flex: 1; background: transparent; border: none; outline: none; color: #fff; font-size: 0.95rem; }
+        
+        .circle-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .circle-btn:hover { background: var(--card-bg); color: #fff; }
+        .circle-btn.recording { background: rgba(239, 68, 68, 0.2); color: var(--danger); animation: pulse 1.5s infinite; }
+        .send-button { background: var(--chat-bubble-user); color: #fff; }
+        .send-button:hover { background: #1d4ed8; }
+
+        .btn-gen {
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 50%;
+            font-size: 0.82rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: 0.2s;
+        }
+        .btn-gen:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* Full View Modal */
+        .img-modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.85);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .img-modal img { max-width: 85vw; max-height: 85vh; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .img-modal-close {
+            position: absolute; top: 20px; right: 25px;
+            color: white; font-size: 32px; cursor: pointer;
+        }
+
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+    </style>
+</head>
+<body>
+
+<div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon"><i data-lucide="scan-eye" style="width:20px; height:20px; color:#fff;"></i></div>
+            <span>Nova Sight</span>
+        </div>
+
+        <button class="btn-new-chat" onclick="createNewChat()">
+            <i data-lucide="plus" style="width:18px;"></i> புதிய உரையாடல்
+        </button>
+
+        <!-- Document Knowledge Base -->
+        <div>
+            <div class="section-label">ஆவணங்கள் (Knowledge Base)</div>
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                <i data-lucide="upload-cloud" style="width: 24px; color: var(--accent);"></i>
+                <p style="font-size:0.8rem; margin-top:6px; color:var(--text-muted);">PDF, DOCX, TXT சேர்க்க</p>
+                <input type="file" id="fileInput" accept=".pdf, .docx, .txt" multiple style="display: none;" onchange="uploadDocuments()">
+            </div>
+            <div id="fileList" class="file-list" style="margin-top: 10px;"></div>
+        </div>
+
+        <!-- Chat History -->
+        <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
+            <div class="section-label">உரையாடல்கள் (History)</div>
+            <div id="chatHistoryList" class="chat-list" style="max-height: unset; flex:1;"></div>
+        </div>
+
+        <!-- Language Preference -->
+        <div>
+            <div class="section-label">Language / மொழி</div>
+            <select id="languageSelect" style="width: 100%; background: var(--card-bg); color: #fff; padding: 10px; border-radius: 8px; border: 1px solid var(--border); outline:none;">
+                <option value="en-US">English</option>
+                <option value="ta-IN">தமிழ் (Tamil)</option>
+            </select>
+        </div>
+    </aside>
+
+    <!-- Workspace -->
+    <main class="workspace">
+        <header class="topbar">
+            <div style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:0.95rem;">
+                <i data-lucide="cpu" style="width:18px; color:var(--accent);"></i>
+                <span>Nova Sight</span>
+            </div>
+            <button class="tool-btn" onclick="clearCurrentChat()"><i data-lucide="rotate-ccw" style="width:14px;"></i> Clear</button>
+        </header>
+
+        <div id="chatMessages" class="messages-container"></div>
+
+        <div class="input-wrapper">
+            <!-- Selected Image Preview -->
+            <div id="previewBar">
+                <img id="previewImg" src="">
+                <span id="previewName" style="font-size:0.8rem; color:var(--text-muted); flex:1;"></span>
+                <i data-lucide="x" style="cursor:pointer; width:16px;" onclick="cancelSelectedImage()"></i>
+            </div>
+
+            <div class="input-bar">
+                <!-- Attach Image for Chat / Analysis -->
+                <input type="file" id="chatImageInput" accept="image/*" style="display:none;" onchange="handleImageSelection(event)">
+                <button class="circle-btn" onclick="document.getElementById('chatImageInput').click()" title="படம் இணைக்க">
+                    <i data-lucide="image" style="width:18px;"></i>
+                </button>
+
+                <button id="micBtn" class="circle-btn" onclick="toggleVoiceInput()" title="குரல் மூலம் கேட்க">
+                    <i data-lucide="mic" style="width:18px;"></i>
+                </button>
+                
+                <input type="text" id="userInput" placeholder="ஏதேனும் கேளுங்கள் அல்லது படம் உருவாக்க prompt உள்ளிடுங்கள்..." onkeydown="if(event.key==='Enter') sendMessage()">
+                
+                <!-- Dedicated Generate Image Button -->
+                <button class="btn-gen" onclick="triggerImageGeneration()" title="புதிய படம் உருவாக்க">
+                    <i data-lucide="sparkles" style="width:15px;"></i>
+                </button>
+
+                <button class="circle-btn send-button" onclick="sendMessage()" title="அனுப்புக">
+                    <i data-lucide="arrow-up" style="width:18px;"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Modal: Touch panni perithaaga paarka -->
+<div id="imageModal" class="img-modal" onclick="closeModal()">
+    <span class="img-modal-close">&times;</span>
+    <img id="modalFullImg" src="">
+</div>
+
+<script>
+    let currentSessionId = null;
+    let sessions = JSON.parse(localStorage.getItem('dm_sessions') || '{}');
+    let uploadedFiles = JSON.parse(localStorage.getItem('dm_files') || '[]');
+    let selectedImageFile = null;
+    let selectedImageDataUrl = null;
+
+    lucide.createIcons();
+    initApp();
+
+    function initApp() {
+        renderFileList();
+        renderChatHistory();
+        const keys = Object.keys(sessions);
+        if (keys.length === 0) createNewChat();
+        else loadChat(keys[0]);
+    }
+
+    // Modal Functions
+    function openModal(src) {
+        document.getElementById('modalFullImg').src = src;
+        document.getElementById('imageModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('imageModal').style.display = 'none';
+    }
+
+    // Image Input Selection
+    function handleImageSelection(event) {
+        const file = event.target.files[0];
+        if (file) {
+            selectedImageFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                selectedImageDataUrl = e.target.result;
+                document.getElementById('previewImg').src = selectedImageDataUrl;
+                document.getElementById('previewName').innerText = file.name;
+                document.getElementById('previewBar').style.display = 'flex';
+                lucide.createIcons();
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function cancelSelectedImage() {
+        selectedImageFile = null;
+        selectedImageDataUrl = null;
+        document.getElementById('chatImageInput').value = '';
+        document.getElementById('previewBar').style.display = 'none';
+    }
+
+    // 1. Files Management
+    async function uploadDocuments() {
+        const fileInput = document.getElementById('fileInput');
+        if (!fileInput.files.length) return;
+
+        const formData = new FormData();
+        for (let i = 0; i < fileInput.files.length; i++) {
+            formData.append('files', fileInput.files[i]);
+        }
+
+        try {
+            const res = await fetch('/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (res.ok) {
+                data.files.forEach(f => {
+                    if (!uploadedFiles.includes(f)) uploadedFiles.push(f);
+                });
+                localStorage.setItem('dm_files', JSON.stringify(uploadedFiles));
+                renderFileList();
+            }
+        } catch (e) {
+            alert("Upload failed: " + e);
+        }
+    }
+
+    async function deleteDocument(filename) {
+        if (!confirm(`"${filename}" ஆவணத்தை முழுமையாக நீக்க விரும்புகிறீர்களா?`)) return;
+
+        try {
+            const res = await fetch('/delete-file', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename: filename })
+            });
+
+            if (res.ok) {
+                uploadedFiles = uploadedFiles.filter(f => f !== filename);
+                localStorage.setItem('dm_files', JSON.stringify(uploadedFiles));
+                renderFileList();
+            } else {
+                alert("File நீக்குவதில் பிழை ஏற்பட்டது.");
+            }
+        } catch (e) {
+            alert("Error: " + e);
+        }
+    }
+
+    function renderFileList() {
+        const list = document.getElementById('fileList');
+        list.innerHTML = "";
+        uploadedFiles.forEach(file => {
+            const item = document.createElement('div');
+            item.className = 'file-item';
+            item.innerHTML = `
+                <a href="/files/${encodeURIComponent(file)}" target="_blank">
+                    <i data-lucide="file-text" style="width:14px;"></i> ${file}
+                </a>
+                <i data-lucide="trash-2" class="delete-icon" style="width:14px;" onclick="deleteDocument('${file}')"></i>
+            `;
+            list.appendChild(item);
+        });
+        lucide.createIcons();
+    }
+
+    // 2. Chat Sessions Management
+    function createNewChat() {
+        const id = 'chat_' + Date.now();
+        sessions[id] = {
+            title: 'புதிய உரையாடல்',
+            messages: [{
+                role: 'bot',
+                text: 'வணக்கம்! உங்கள் ஆவணங்களை அல்லது படங்களைப் பதிவேற்றிவிட்டு கேள்விகளைக் கேட்கலாம். அல்லது புதிய படங்களை உருவாக்கலாம்.'
+            }]
+        };
+        saveSessions();
+        renderChatHistory();
+        loadChat(id);
+    }
+
+    function loadChat(id) {
+        currentSessionId = id;
+        renderChatHistory();
+        const container = document.getElementById('chatMessages');
+        container.innerHTML = "";
+        sessions[id].messages.forEach(msg => appendMessageUI(msg.text, msg.role, false));
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // Chat messages-la irunthu images & cited docs rendaiyum edukkum function
+    function extractChatAssets(messages) {
+        const filenames = new Set();
+        if (!messages) return [];
+
+        // Image regex (/generated/ allathu /files/)
+        const imgRegex = /(?:src=["']\/(?:generated|files)\/([^"']+)["'])/g;
+        
+        // Citation / Source regex: Source: [Filename.pdf, Page X] allathu aavanam link
+        const docRegex = /(?:Source:\s*\[|ஆதாரம்:\s*\[|\/files\/)([a-zA-Z0-9_\-\.]+\.(?:pdf|docx|doc|txt))/gi;
+
+        messages.forEach(msg => {
+            const text = msg.text || '';
+
+            // Extract Images
+            let matchImg;
+            while ((matchImg = imgRegex.exec(text)) !== null) {
+                if (matchImg[1]) filenames.add(matchImg[1].trim());
+            }
+
+            // Extract Documents
+            let matchDoc;
+            while ((matchDoc = docRegex.exec(text)) !== null) {
+                if (matchDoc[1]) filenames.add(matchDoc[1].trim());
+            }
+        });
+
+        return Array.from(filenames);
+    }
+
+    // Server-la irunthu antha files-ai delete seiyum function
+    async function removeAssetsFromServer(filenames) {
+        if (!filenames || filenames.length === 0) return;
+        try {
+            const res = await fetch('/delete-chat-assets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filenames: filenames })
+            });
+            const data = await res.json();
+            
+            // Sidebar-la irukkura uploaded files list-laiyum update seithal
+            if (data.deleted && data.deleted.length > 0) {
+                uploadedFiles = uploadedFiles.filter(f => !data.deleted.includes(f));
+                localStorage.setItem('dm_files', JSON.stringify(uploadedFiles));
+                renderFileList();
+            }
+        } catch (e) {
+            console.error("Files delete seivathil pizhai:", e);
+        }
+    }
+
+    // 1. Clear Current Chat
+    async function clearCurrentChat() {
+        if (!currentSessionId || !sessions[currentSessionId]) return;
+
+        if (!confirm("Intha chat matrum ithoda thodarbudaiya images, documents ellathaiyum neekka venduma?")) return;
+
+        const assetsToDelete = extractChatAssets(sessions[currentSessionId].messages);
+        await removeAssetsFromServer(assetsToDelete);
+
+        sessions[currentSessionId].messages = [];
+        saveSessions();
+        document.getElementById('chatMessages').innerHTML = "";
+    }
+
+    // 2. Delete Chat History
+    async function deleteChat(e, id) {
+        e.stopPropagation();
+        if (!sessions[id]) return;
+
+        if (!confirm("Intha chat history matrum ithoda sambandhappatta files-ai azhikka venduma?")) return;
+
+        const assetsToDelete = extractChatAssets(sessions[id].messages);
+        await removeAssetsFromServer(assetsToDelete);
+
+        delete sessions[id];
+        saveSessions();
+        
+        const keys = Object.keys(sessions);
+        if (keys.length > 0) loadChat(keys[0]);
+        else createNewChat();
+    }
+
+    function renderChatHistory() {
+        const list = document.getElementById('chatHistoryList');
+        list.innerHTML = "";
+        for (const [id, session] of Object.entries(sessions)) {
+            const div = document.createElement('div');
+            div.className = `chat-item ${id === currentSessionId ? 'active' : ''}`;
+            div.onclick = () => loadChat(id);
+            div.innerHTML = `
+                <span>${session.title || 'Chat'}</span>
+                <i data-lucide="trash" class="delete-icon" style="width:13px;" onclick="deleteChat(event, '${id}')"></i>
+            `;
+            list.appendChild(div);
+        }
+        lucide.createIcons();
+    }
+
+    function saveSessions() { localStorage.setItem('dm_sessions', JSON.stringify(sessions)); }
+
+    // 3. Message Handling (Chat & Image Analysis)
+    async function sendMessage() {
+        const input = document.getElementById('userInput');
+        const query = input.value.trim();
+        const lang = document.getElementById('languageSelect').value;
+        if (!query && !selectedImageFile) return;
+
+        // Command വഴി image generation
+        if (query.startsWith('/image ') || query.startsWith('/generate ')) {
+            const prompt = query.replace(/^\/(image|generate)\s+/, '');
+            input.value = prompt;
+            triggerImageGeneration();
+            return;
+        }
+
+        if (sessions[currentSessionId].messages.length <= 1) {
+            sessions[currentSessionId].title = (query || "Image Analysis").slice(0, 26) + '...';
+            saveSessions();
+            renderChatHistory();
+        }
+
+        // User UI display
+        let userContent = escapeHtml(query);
+        if (selectedImageDataUrl) {
+            userContent += `<br><img src="${selectedImageDataUrl}" class="chat-img-thumb" onclick="openModal('${selectedImageDataUrl}')" title="தொட்டுப் பார்க்க">`;
+        }
+        appendMessageUI(userContent, 'user', true);
+
+        const formData = new FormData();
+        formData.append('query', query);
+        formData.append('language', lang);
+        if (selectedImageFile) {
+            formData.append('image', selectedImageFile);
+        }
+
+        input.value = "";
+        cancelSelectedImage();
+
+        const botRow = appendMessageUI("...", 'bot', false);
+        const bubble = botRow.querySelector('.bubble');
+
+        try {
+            const res = await fetch('/chat', { method: 'POST', body: formData });
+            bubble.innerHTML = "";
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let completeResponse = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const chunk = decoder.decode(value, { stream: true });
+                completeResponse += chunk;
+                bubble.innerHTML = marked.parse(completeResponse);
+                document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+            }
+
+            sessions[currentSessionId].messages.push({ role: 'bot', text: completeResponse });
+            saveSessions();
+
+            // Actions toolbar
+            const actions = document.createElement('div');
+            actions.className = 'actions-toolbar';
+
+            const speakBtn = document.createElement('button');
+            speakBtn.className = 'tool-btn';
+            speakBtn.innerHTML = `<i data-lucide="volume-2" style="width:12px;"></i> கேட்க`;
+            speakBtn.addEventListener('click', () => speakText(speakBtn, completeResponse));
+
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'tool-btn';
+            copyBtn.innerHTML = `<i data-lucide="copy" style="width:12px;"></i> நகலெடு`;
+            copyBtn.addEventListener('click', () => copyResponse(copyBtn, completeResponse));
+
+            actions.appendChild(speakBtn);
+            actions.appendChild(copyBtn);
+            botRow.querySelector('.bubble-content').appendChild(actions);
+            lucide.createIcons();
+
+        } catch (err) {
+            bubble.innerText = "Error: சர்வரை அணுக முடியவில்லை.";
+        }
+    }
+
+    // 4. Image Generation Trigger
+    async function triggerImageGeneration() {
+        const input = document.getElementById('userInput');
+        const prompt = input.value.trim();
+
+        if (!prompt) {
+            alert("படம் உருவாக்க தேவையான விளக்கத்தை (Prompt) தட்டச்சு செய்யவும்!");
+            return;
+        }
+
+        appendMessageUI(`🎨 <b>உருவாக்கக் கோரிக்கை:</b> ${escapeHtml(prompt)}`, 'user', true);
+        input.value = "";
+
+        const botRow = appendMessageUI("படம் உருவாகிறது, சற்று காத்திருக்கவும்...", 'bot', false);
+        const bubble = botRow.querySelector('.bubble');
+
+        try {
+            const res = await fetch('/generate-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: prompt })
+            });
+            const data = await res.json();
+
+            if (data.image_url) {
+                const imgHtml = `
+                    <p>உருவாக்கப்பட்ட படம் (${data.filename || ''}):</p>
+                    <img src="${data.image_url}" class="chat-img-thumb" onclick="openModal('${data.image_url}')" title="தொட்டுப் பார்க்க">
+                `;
+                bubble.innerHTML = imgHtml;
+                sessions[currentSessionId].messages.push({ role: 'bot', text: imgHtml });
+                saveSessions();
+            } else {
+                bubble.innerText = "Error: " + (data.error || "படம் உருவாக்க முடியவில்லை.");
+            }
+        } catch (err) {
+            bubble.innerText = "Error: சர்வரை அணுக முடியவில்லை.";
+        }
+    }
+
+    function appendMessageUI(text, sender, save = false) {
+        if (save && currentSessionId) {
+            sessions[currentSessionId].messages.push({ role: sender, text: text });
+            saveSessions();
+        }
+
+        const container = document.getElementById('chatMessages');
+        const row = document.createElement('div');
+        row.className = `message-row ${sender}`;
+
+        // HTML குறிச்சொற்கள் (<img, <p, <div) இருந்தால் நேரடியாக HTML-ஆகக் காட்ட வேண்டும்
+        const isHtml = /<[a-z][\s\S]*>/i.test(text);
+
+        if (sender === 'user') {
+            const content = isHtml ? text : escapeHtml(text);
+            row.innerHTML = `<div class="bubble-content"><div class="bubble">${content}</div></div>`;
+        } else {
+            const content = isHtml ? text : marked.parse(text);
+            row.innerHTML = `
+                <div class="avatar bot"><i data-lucide="bot" style="width:18px; color:#fff;"></i></div>
+                <div class="bubble-content">
+                    <div class="bubble">${content}</div>
+                </div>
+            `;
+        }
+        container.appendChild(row);
+        container.scrollTop = container.scrollHeight;
+        lucide.createIcons();
+        return row;
+    }
+
+    // 5. Speech-To-Text & Text-To-Speech
+    function toggleVoiceInput() {
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRec) return alert("உங்கள் Browser-ல் Voice ஆதரவு இல்லை.");
+        
+        const mic = document.getElementById('micBtn');
+        const rec = new SpeechRec();
+        rec.lang = document.getElementById('languageSelect').value;
+
+        rec.onstart = () => mic.classList.add('recording');
+        rec.onend = () => mic.classList.remove('recording');
+        rec.onresult = (e) => {
+            document.getElementById('userInput').value = e.results[0][0].transcript;
+            sendMessage();
+        };
+        rec.start();
+    }
+
+    let speechQueue = [];
+    let isSpeakingActive = false;
+    let availableVoices = [];
+
+    function loadVoices() { availableVoices = window.speechSynthesis.getVoices(); }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    function speakText(btn, text) {
+        if (!('speechSynthesis' in window)) return alert("Voice வசதி இல்லை.");
+        if (isSpeakingActive) { stopSpeech(); return; }
+        stopSpeech();
+
+        const cleanText = text.replace(/[*#_`~\[\]\(\)>]/g, '').replace(/https?:\/\/\S+/g, '').replace(/[\r\n]+/g, ' ').trim();
+        if (!cleanText) return;
+
+        const rawSentences = cleanText.split(/([.!?।\n]+)/);
+        speechQueue = [];
+
+        for (let i = 0; i < rawSentences.length; i += 2) {
+            let sentence = rawSentences[i] ? rawSentences[i].trim() : '';
+            if (sentence) {
+                const subChunks = sentence.split(/,\s*/);
+                subChunks.forEach(sub => { if (sub.trim()) speechQueue.push(sub.trim()); });
+            }
+        }
+
+        if (speechQueue.length === 0) return;
+        isSpeakingActive = true;
+        btn.classList.add('active-speak');
+        btn.innerHTML = `<i data-lucide="square" style="width:12px;"></i> நிறுத்த`;
+        lucide.createIcons();
+        playNextChunk(btn);
+    }
+
+    function playNextChunk(btn) {
+        if (!isSpeakingActive || speechQueue.length === 0) { stopSpeech(); return; }
+
+        const currentText = speechQueue.shift();
+        const utterance = new SpeechSynthesisUtterance(currentText);
+        const selectedLang = document.getElementById('languageSelect').value;
+        utterance.lang = selectedLang;
+
+        if (availableVoices.length === 0) availableVoices = window.speechSynthesis.getVoices();
+        if (selectedLang.startsWith('ta')) {
+            const tamilVoice = availableVoices.find(v => v.lang.includes('ta') || v.lang.includes('ta-IN'));
+            if (tamilVoice) utterance.voice = tamilVoice;
+        }
+
+        utterance.rate = 0.95;
+        utterance.onend = () => playNextChunk(btn);
+        utterance.onerror = () => playNextChunk(btn);
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function stopSpeech() {
+        isSpeakingActive = false;
+        speechQueue = [];
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        document.querySelectorAll('.tool-btn').forEach(b => {
+            if (b.innerText.includes('நிறுத்த') || b.classList.contains('active-speak')) {
+                b.classList.remove('active-speak');
+                b.innerHTML = `<i data-lucide="volume-2" style="width:12px;"></i> கேட்க`;
+            }
+        });
+        lucide.createIcons();
+    }
+
+    function copyResponse(btn, text) {
+        navigator.clipboard.writeText(text);
+        const original = btn.innerHTML;
+        btn.innerHTML = `<i data-lucide="check" style="width:12px; color:#81c995;"></i> Copied!`;
+        lucide.createIcons();
+        setTimeout(() => { btn.innerHTML = original; lucide.createIcons(); }, 1500);
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+</script>
+
+</body>
+</html>
